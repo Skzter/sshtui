@@ -9,8 +9,9 @@ import (
 )
 
 type sshEntry struct {
-	IP   string
-	Port int
+	IP       string
+	Port     int
+	Username string
 }
 
 func main() {
@@ -28,14 +29,12 @@ func main() {
 
 	scanner := bufio.NewScanner(data)
 
-	var sshEntrys []sshEntry
+	sshEntrys := make(map[string]sshEntry)
 
 	for scanner.Scan() {
-		fmt.Println(scanner.Text())
 		item := scanner.Text()
 		startIP := strings.Index(item, "[")
 		if startIP == -1 {
-			fmt.Println("No IP found")
 			continue
 		}
 		endIP := strings.Index(item, "]")
@@ -46,12 +45,14 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		sshEntrys = append(sshEntrys, sshEntry{IP: IP, Port: PORT})
+		sshEntrys[IP] = sshEntry{IP: IP, Port: PORT}
 	}
 
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 
-	fmt.Println(sshEntrys)
+	for {
+		fmt.Println(sshEntrys)
+	}
 }
