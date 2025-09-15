@@ -1,25 +1,24 @@
 package main
 
-// A simple program demonstrating the text input component from the Bubbles
-// component library.
-
 import (
 	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/bubbles/textinput"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-func main() {
-	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
-}
+type Page int
+
+const (
+	Auswahl Page = iota
+	Connect
+)
 
 type sshEntry struct {
 	IP       string
@@ -28,13 +27,21 @@ type sshEntry struct {
 }
 
 type model struct {
-	sshEntrys []sshEntry
-	cursor    int
-	selected  map[int]sshEntry
+	textInput  textinput.Model
+	sshEntrys  []sshEntry
+	cursor     int
+	page       Page
+	selectedIP sshEntry
+}
+
+func main() {
+	p := tea.NewProgram(initialModel())
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func initialModel() model {
-
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -49,7 +56,7 @@ func initialModel() model {
 
 	scanner := bufio.NewScanner(data)
 
-	sshEntrys := make(map[string]sshEntry)
+	var sshEntrys []sshEntry
 
 	for scanner.Scan() {
 		item := scanner.Text()
@@ -65,21 +72,25 @@ func initialModel() model {
 		if err != nil {
 			panic(err)
 		}
-		sshEntrys[IP] = sshEntry{IP: IP, Port: PORT}
+		entry := sshEntry{IP: IP, Port: PORT}
+		if !slices.Contains(sshEntrys, entry) {
+			sshEntrys = append(sshEntrys, entry)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 
-	var entryArr []sshEntry
-	for _, value := range sshEntrys {
-		entryArr = append(entryArr, value)
-	}
+	ti := textinput.New()
+	ti.Focus()
+
 	return model{
-		sshEntrys: entryArr,
-		cursor:    0,
-		selected:  make(map[int]sshEntry),
+		sshEntrys:  sshEntrys,
+		cursor:     0,
+		page:       Auswahl,
+		selectedIP: sshEntry{},
+		textInput:  ti,
 	}
 }
 
@@ -90,7 +101,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	case tea.KeyPressMsg:
+	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
@@ -105,36 +116,49 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.sshEntrys)-1 {
 				m.cursor++
 			}
-		case "enter", "space":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = m.sshEntrys[m.cursor]
+		case "space", "enter":
+			if m.page == Auswahl {
+				m.selectedIP = m.sshEntrys[m.cursor]
+				m.page = Connect
+			}
+		case "backspace":
+			if m.page > 0 {
+				m.page--
 			}
 		}
+	}
+
+	if m.page == Connect {
+		var cmd tea.Cmd
+		m.textInput, cmd = m.textInput.Update(msg)
+		return m, cmd
 	}
 	return m, nil
 }
 
 func (m model) View() string {
 	s := "SSHTUI\n\n"
-	// iterate over IPs
-	for i, entry := range m.sshEntrys {
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // cursor!
+
+	switch m.page {
+	case Auswahl:
+		s += "Auswahl der IPs:\n"
+
+		// iterate over IPs
+		for i, entry := range m.sshEntrys {
+			// Is the cursor pointing at this choice?
+			cursor := " " // no cursor
+			if m.cursor == i {
+				cursor = ">" // cursor!
+			}
+
+			// Render the row
+			s += fmt.Sprintf("%s %s\n", cursor, entry.IP)
 		}
 
-		// Is this choice selected?
-		checked := " " // not selected
-		if _, ok := m.selected[i]; ok {
-			checked = "x" // selected!
-		}
+	case Connect:
+		s += fmt.Sprintf("Connecten zu IP: %s Port: %d\n", m.selectedIP.IP, m.selectedIP.Port)
+		s += fmt.Sprintf("Username %s\n", m.textInput.View())
 
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, entry.IP)
 	}
 	s += "\nPress q to quit"
 

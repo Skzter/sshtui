@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -29,7 +30,7 @@ func main() {
 
 	scanner := bufio.NewScanner(data)
 
-	sshEntrys := make(map[string]sshEntry)
+	var sshEntrys []sshEntry
 
 	for scanner.Scan() {
 		item := scanner.Text()
@@ -45,14 +46,15 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		sshEntrys[IP] = sshEntry{IP: IP, Port: PORT}
+		entry := sshEntry{IP: IP, Port: PORT}
+		if !slices.Contains(sshEntrys, entry) {
+			sshEntrys = append(sshEntrys, entry)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
 
-	for {
-		fmt.Println(sshEntrys)
-	}
+	fmt.Println(sshEntrys)
 }
