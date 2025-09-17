@@ -74,31 +74,6 @@ type model struct {
 	shouldRunSSH bool
 }
 
-func main() {
-	m := initialModel()
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	if m.shouldRunSSH {
-		runSSH(m)
-	}
-}
-
-func runSSH(m model) {
-
-	args := [...]string{fmt.Sprintf("%s@%s", m.selectedIP.Username, m.selectedIP.IP), fmt.Sprintf("-P %d", m.selectedIP.Port)}
-	cmd := exec.Command("ssh", args[0], args[1])
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 func initialModel() model {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -205,7 +180,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "e":
 			if m.page == Connect && !m.typing {
+				m.page = Execute
 				m.shouldRunSSH = true
+				// write to temp file
 				return m, tea.Quit
 			}
 		}
@@ -255,10 +232,35 @@ func (m model) View() string {
 			}
 		}
 	case Execute:
-		return "executing ssh command"
+		return fmt.Sprintf("%t, IP: %v - executing ssh command", m.shouldRunSSH, m.selectedIP)
 	}
 	helpview := m.help.View(m.keys)
 	s += "\n" + helpview
 
 	return s
+}
+
+func main() {
+	m := initialModel()
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func writeTempFile(m model) {
+	info := 
+}
+func runSSH(m model) {
+
+	args := [...]string{fmt.Sprintf("%s@%s", m.selectedIP.Username, m.selectedIP.IP), fmt.Sprintf("-P %d", m.selectedIP.Port)}
+	cmd := exec.Command("ssh", args[0], args[1])
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
