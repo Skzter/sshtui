@@ -1,60 +1,50 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"slices"
-	"strconv"
-	"strings"
+	"os/exec"
 )
 
-type sshEntry struct {
-	IP       string
-	Port     int
-	Username string
-}
-
 func main() {
-	home, err := os.UserHomeDir()
+	args := os.Args
+
+	// username, IP, Port
+	programmArgs := args[1:]
+	fmt.Println(programmArgs)
+	/*
+		name_and_ip := fmt.Sprintf("%s@%s", programmArgs[0], programmArgs[1])
+		port := programmArgs[2]
+	*/
+	file, err := os.Create("/tmp/sshdata")
 	if err != nil {
 		panic(err)
 	}
-
-	sshDir := home + "/.ssh/known_hosts"
-	data, err := os.Open(sshDir)
+	defer file.Close()
+	data := fmt.Sprintf("%s %s %s\n", programmArgs[0], programmArgs[1], programmArgs[2])
+	n, err := file.WriteString(data)
 	if err != nil {
 		panic(err)
 	}
-	defer data.Close()
+	fmt.Printf("wrote %d bytes to the file\n", n)
+	file.Sync()
 
-	scanner := bufio.NewScanner(data)
-
-	var sshEntrys []sshEntry
-
-	for scanner.Scan() {
-		item := scanner.Text()
-		startIP := strings.Index(item, "[")
-		if startIP == -1 {
-			continue
-		}
-		endIP := strings.Index(item, "]")
-		IP := item[startIP+1 : endIP]
-		startPort := strings.Index(item, ":")
-		endPort := strings.Index(item, " ")
-		PORT, err := strconv.Atoi(item[startPort+1 : endPort])
-		if err != nil {
-			panic(err)
-		}
-		entry := sshEntry{IP: IP, Port: PORT}
-		if !slices.Contains(sshEntrys, entry) {
-			sshEntrys = append(sshEntrys, entry)
-		}
+	d, err := os.ReadFile("/tmp/sshdata")
+	if err != nil {
+		panic(err)
 	}
+	fmt.Println("data from file")
+	fmt.Println(string(d))
 
-	if err := scanner.Err(); err != nil {
+	os.Remove("/tmp/sshdata")
+
+	fmt.Println("after cleanup")
+	cmd := exec.Command("ls", "/tmp/")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
 
-	fmt.Println(sshEntrys)
 }
