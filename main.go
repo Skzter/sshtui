@@ -212,7 +212,7 @@ func (m model) View() string {
 
 	switch m.page {
 	case Auswahl:
-		s += "Auswahl der IPs:\n"
+		s += "Pick your IP:\n"
 		for i, entry := range m.sshEntrys {
 			cursor := " "
 			if m.cursor == i {
@@ -221,7 +221,7 @@ func (m model) View() string {
 			s += fmt.Sprintf("%s %s\n", cursor, entry.IP)
 		}
 	case Connect:
-		s += fmt.Sprintf("Connecten zu IP: %s Port: %d\n", m.selectedIP.IP, m.selectedIP.Port)
+		s += fmt.Sprintf("Connect to IP: %s Port: %d\n", m.selectedIP.IP, m.selectedIP.Port)
 		s += fmt.Sprintf("Username %s\n", m.textInput.View())
 		if !m.typing {
 			if !(m.selectedIP.Username == "") {
