@@ -247,7 +247,7 @@ func main() {
 }
 
 func writeTempFile(m model) {
-	data := fmt.Sprintf("%s@%s %d\n", m.selectedIP.Username, m.selectedIP.IP, m.selectedIP.Port)
+	data := fmt.Sprintf("%s@%s %d", m.selectedIP.Username, m.selectedIP.IP, m.selectedIP.Port)
 	file, err := os.Create(tempFile)
 	if err != nil {
 		fmt.Println("could not create temporary file, please try again")
@@ -273,7 +273,7 @@ func checkAndRunSSH() {
 	os.Remove(tempFile)
 
 	fmt.Printf("connecting to %s\n", destination)
-	cmd := exec.Command("ssh", destination, "-P", port)
+	cmd := exec.Command("ssh", destination, "-p", port)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
